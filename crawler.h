@@ -1,32 +1,36 @@
 #pragma once
 
-#include <QNetworkReply>
 #include <QObject>
-#include <QWaitCondition>
+
+#include <memory>
+
+enum class RequestStatus : int {
+    TEXT_FOUND,
+    TEXT_NOT_FOUND,
+    ERROR
+};
+
+class QString;
 
 class Crawler : public QObject {
     Q_OBJECT
+
 public:
-    explicit Crawler(const QString &start_url, const QString &query, int max_urls);
+    explicit Crawler(const QString& start_url, const QString& query, int max_urls);
+    ~Crawler() override;
 
-    enum class Status : int {
-        TEXT_FOUND,
-        TEXT_ABSENT,
-        ERROR
-    };
+    void start();
+    void suspend();
+    void resume();
+    void abort();
 
-    void run();
 signals:
-    void progressChanged(double val);
-    void requestStatusChanged(Status status, const QString &text);
-    void requestAboutToStart(const QString &url);
+    void requestAboutToStart(const QString& url);
+    void requestCompleted(RequestStatus status, const QString& text);
+    void progress(double val);
     void finished();
 
 private:
-    void processReply(QNetworkReply *reply, QQueue<QString> *queue, QSet<QString> *visited);
-
-    QRegExp url_matcher;
-    QString start_url;
-    QString query;
-    int max_urls;
+    struct Impl;
+    std::unique_ptr<Impl> pimpl;
 };

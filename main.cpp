@@ -1,16 +1,13 @@
 #include "window.h"
+#include "crawler.h"
 
 #include <QApplication>
-#include <QMutex>
-
-QWaitCondition cond;
-QMutex mutex;
-bool paused = false;
-bool stoped = false;
 
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+
+    qRegisterMetaType<RequestStatus>("RequestStatus");
 
     Window window;
     window.show();

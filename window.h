@@ -1,54 +1,47 @@
 #pragma once
 
-#include "crawler.h"
-
 #include <QWidget>
-#include <QTextEdit>
-#include <QPushButton>
-#include <QNetworkReply>
-#include <QLineEdit>
-#include <QWaitCondition>
+#include <QPointer>
+
+enum class RequestStatus : int;
+class Crawler;
+
+class QTextEdit;
+class QLineEdit;
+class QPushButton;
 
 class Window : public QWidget {
-    Q_OBJECT
 public:
-    explicit Window(QWidget *parent = nullptr);
+    explicit Window(QWidget* parent = nullptr);
+    ~Window() override;
 
 protected:
-    void paintEvent(QPaintEvent *ev) override;
+    void paintEvent(QPaintEvent* ev) override;
 
 private:
-    enum class State : int {
-        RUN,
-        SUSPEND,
-        RESUME,
-        STOP_REQUEST,
-        STOP,
-        UNDEFINED
-    };
-
-    void onStateChanged(State state);
-
-    void start();
-    void suspend();
-    void resume();
-    void stop();
-    void finish();
-    void reset();
-
     void initUI();
 
-    void onUrlLoading(const QString &url);
-    void onStatusChanged(Crawler::Status status, const QString &text);
+    void start();
+    void abort();
+    void pause();
+    void reset();
+
+    void updateRunningStatus(bool running);
+    void updatePauseStatus(bool pause);
+
+    void onUrlLoading(const QString& url);
+    void onStatusChanged(RequestStatus status, const QString& text);
     void onProgressChanged(double val);
 
-    QPushButton *start_btn;
-    QPushButton *stop_btn;
-    QPushButton *pause_btn;
-    QPushButton *reset_btn;
-    QLineEdit *start_url;
-    QLineEdit *text;
-    QLineEdit *max_urls_num;
-    QTextEdit *scanning_list;
+    QPushButton* start_btn;
+    QPushButton* abort_btn;
+    QPushButton* pause_btn;
+    QPushButton* reset_btn;
+    QLineEdit* start_url;
+    QLineEdit* query_str;
+    QLineEdit* urls_to_scan;
+    QTextEdit* log;
     double progress;
+
+    QPointer<Crawler> crawler;
 };

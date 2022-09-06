@@ -1,8 +1,9 @@
 #include "window.h"
 #include "crawler.h"
 
+#include <QTabWidget>
 #include <QPushButton>
-#include <QTextEdit>
+#include <QTextBrowser>
 #include <QLineEdit>
 #include <QPainter>
 
@@ -57,7 +58,11 @@ void Window::initUI()
     abort_btn = new QPushButton(QLatin1String("Abort"), this);
     pause_btn = new QPushButton(QLatin1String("Pause"), this);
     reset_btn = new QPushButton(QLatin1String("Reset"), this);
-    log = new QTextEdit(this);
+    tab_widget = new QTabWidget(this);
+    result_list = new QTextBrowser();
+    tab_widget->addTab(result_list, QLatin1String("Results"));
+    issues_list = new QTextBrowser();
+    tab_widget->addTab(issues_list, QLatin1String("Issues"));
 
     start_url->setGeometry(10, 10, 400, 30);
     query_str->setGeometry(10, 50, 400, 30);
@@ -66,7 +71,7 @@ void Window::initUI()
     abort_btn->setGeometry(210, 90, 60, 30);
     pause_btn->setGeometry(280, 90, 60, 30);
     reset_btn->setGeometry(350, 90, 60, 30);
-    log->setGeometry(450, 10, 500, 550);
+    tab_widget->setGeometry(450, 10, 500, 550);
 
     const QFont font(QLatin1String("Helvetica"), 10, 60);
     for (auto le : {start_url, query_str, urls_to_scan}) {
@@ -77,9 +82,8 @@ void Window::initUI()
     query_str->setPlaceholderText(QLatin1String("Query"));
     urls_to_scan->setPlaceholderText(QLatin1String("URLs to scan"));
 
-    log->setFontWeight(70);
-    log->setFontPointSize(10);
-    log->setReadOnly(true);
+    result_list->setOpenExternalLinks(true);
+    issues_list->setOpenExternalLinks(true);
 
     reset();
 
@@ -93,12 +97,13 @@ void Window::start()
 {
     Q_ASSERT(!crawler);
 
-    log->clear();
+    result_list->clear();
+    issues_list->clear();
     updateRunningStatus(true);
     crawler = new Crawler(start_url->text(), query_str->text(), urls_to_scan->text().toInt());
 
-    connect(crawler, &Crawler::requestCompleted, this, &Window::onStatusChanged);
-    connect(crawler, &Crawler::requestAboutToStart, this, &Window::onUrlLoading);
+    connect(crawler, &Crawler::urlFound, this, &Window::onUrlFound);
+    connect(crawler, &Crawler::urlError, this, &Window::onUrlError);
     connect(crawler, &Crawler::progress, this, &Window::onProgressChanged);
     connect(crawler, &Crawler::finished, this, [this]() {
         crawler->deleteLater();
@@ -130,7 +135,8 @@ void Window::pause()
 void Window::reset()
 {
     Q_ASSERT(!crawler);
-    log->clear();
+    result_list->clear();
+    issues_list->clear();
     start_url->clear();
     query_str->clear();
     urls_to_scan->clear();
@@ -141,7 +147,8 @@ void Window::reset()
     onProgressChanged(0.);
 }
 
-void Window::updateRunningStatus(bool running) {
+void Window::updateRunningStatus(bool running)
+{
     start_url->setReadOnly(running);
     query_str->setReadOnly(running);
     urls_to_scan->setReadOnly(running);
@@ -154,35 +161,23 @@ void Window::updateRunningStatus(bool running) {
     }
 }
 
-void Window::updatePauseStatus(bool pause) {
+void Window::updatePauseStatus(bool pause)
+{
     pause_btn->setText(QLatin1String(pause ? "Pause" : "Resume"));
 }
 
-void Window::onUrlLoading(const QString& url)
+void Window::onUrlFound(const QString& url)
 {
-    log->setTextColor(Qt::darkGray);
-    log->append(url);
-    log->setTextColor(Qt::darkCyan);
-    log->append(QLatin1String("Loading ..."));
+    const QLatin1String style("font-size: 17px; color: #1a0dab; text-decoration: none;");
+    result_list->append(QLatin1String("<a href='%1'><span style='%2'>%1</span></a><br>").arg(url, style));
 }
 
-void Window::onStatusChanged(RequestStatus status, const QString& text)
+void Window::onUrlError(const QString& url, const QString& err_msg)
 {
-    // set cursor at the begining of the line
-    log->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
-    log->moveCursor(QTextCursor::StartOfLine, QTextCursor::MoveAnchor);
-    log->moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
-    log->textCursor().removeSelectedText();
-    log->textCursor().deletePreviousChar();
-
-    switch (status) {
-    case RequestStatus::TEXT_FOUND: log->setTextColor(Qt::darkGreen); break;
-    case RequestStatus::TEXT_NOT_FOUND: log->setTextColor(Qt::darkYellow); break;
-    case RequestStatus::ERROR: log->setTextColor(Qt::darkRed); break;
-    }
-
-    log->append(text);
-    log->append(QString());
+    const QLatin1String link_style("font-size: 15px; color: gray; text-decoration: none;");
+    const QLatin1String err_msg_style("font-size: 15px; font-weight: bold; color: red;");
+    issues_list->append(QLatin1String("<a href='%1'><span style='%2'>%1</span></a>").arg(url, link_style));
+    issues_list->append(QLatin1String("<span style='%2'>%1</span><br>").arg(err_msg, err_msg_style));
 }
 
 void Window::onProgressChanged(double val)

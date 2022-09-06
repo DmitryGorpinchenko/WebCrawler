@@ -3,10 +3,10 @@
 #include <QWidget>
 #include <QPointer>
 
-enum class RequestStatus : int;
 class Crawler;
 
-class QTextEdit;
+class QTabWidget;
+class QTextBrowser;
 class QLineEdit;
 class QPushButton;
 
@@ -29,8 +29,8 @@ private:
     void updateRunningStatus(bool running);
     void updatePauseStatus(bool pause);
 
-    void onUrlLoading(const QString& url);
-    void onStatusChanged(RequestStatus status, const QString& text);
+    void onUrlFound(const QString& url);
+    void onUrlError(const QString& url, const QString& err_msg);
     void onProgressChanged(double val);
 
     QPushButton* start_btn;
@@ -40,7 +40,9 @@ private:
     QLineEdit* start_url;
     QLineEdit* query_str;
     QLineEdit* urls_to_scan;
-    QTextEdit* log;
+    QTextBrowser* result_list;
+    QTextBrowser* issues_list;
+    QTabWidget* tab_widget;
     double progress;
 
     QPointer<Crawler> crawler;

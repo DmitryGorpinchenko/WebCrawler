@@ -41,7 +41,7 @@ struct Crawler::Impl {
 
     void run();
     QNetworkReply* performGetRequest(const QString& url);
-    void processReply(QNetworkReply* reply);
+    void processUrl(const QString& url);
 };
 
 Crawler::Impl::Impl(Crawler& _owner, const QString& _start_url, const QString& _query, int _max_urls)
@@ -103,8 +103,7 @@ void Crawler::Impl::run()
             break;
         }
 
-        const auto url = queue.dequeue();
-        processReply(performGetRequest(url));
+        processUrl(queue.dequeue());
 
         emit owner.progress(static_cast<double>(++scanned_urls) / max_urls);
     }
@@ -115,7 +114,6 @@ void Crawler::Impl::run()
 
 QNetworkReply* Crawler::Impl::performGetRequest(const QString& url)
 {
-    emit owner.requestAboutToStart(url);
     auto reply = http.get(QNetworkRequest(QUrl(url)));
     QEventLoop eventLoop;
     QObject::connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
@@ -123,13 +121,17 @@ QNetworkReply* Crawler::Impl::performGetRequest(const QString& url)
     return reply;
 }
 
-void Crawler::Impl::processReply(QNetworkReply* reply)
+void Crawler::Impl::processUrl(const QString& url)
 {
+    emit owner.urlLoading(url);
+    auto reply = performGetRequest(url);
     if (reply->error() == QNetworkReply::NoError) {
         const QString content(reply->readAll());
-        const bool found = content.contains(query, Qt::CaseInsensitive);
-        emit owner.requestCompleted(found ? RequestStatus::TEXT_FOUND : RequestStatus::TEXT_NOT_FOUND,
-                                    found ? QLatin1String("FOUND") : QLatin1String("NOT FOUND"));
+        if (content.contains(query, Qt::CaseInsensitive)) {
+            emit owner.urlFound(url);
+        } else {
+            emit owner.urlNotFound(url);
+        }
         int cursor = 0;
         while ((cursor = url_matcher.indexIn(content, cursor)) != -1) {
             const auto neigh = url_matcher.cap(0);
@@ -140,7 +142,7 @@ void Crawler::Impl::processReply(QNetworkReply* reply)
             cursor += url_matcher.matchedLength();
         }
     } else {
-        emit owner.requestCompleted(RequestStatus::ERROR, reply->errorString());
+        emit owner.urlError(url, reply->errorString());
     }
     reply->deleteLater();
 }

@@ -4,12 +4,6 @@
 
 #include <memory>
 
-enum class RequestStatus : int {
-    TEXT_FOUND,
-    TEXT_NOT_FOUND,
-    ERROR
-};
-
 class QString;
 
 class Crawler : public QObject {
@@ -25,8 +19,10 @@ public:
     void abort();
 
 signals:
-    void requestAboutToStart(const QString& url);
-    void requestCompleted(RequestStatus status, const QString& text);
+    void urlLoading(const QString& url);
+    void urlFound(const QString& url);
+    void urlNotFound(const QString& url);
+    void urlError(const QString& url, const QString& err_msg);
     void progress(double val);
     void finished();
 

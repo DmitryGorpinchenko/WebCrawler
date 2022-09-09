@@ -1,6 +1,7 @@
 #include "window.h"
 #include "crawler.h"
 
+#include <QScrollBar>
 #include <QListWidgetItem>
 #include <QListWidget>
 #include <QPushButton>
@@ -10,7 +11,7 @@
 Window::Window(QWidget* parent)
     : QWidget(parent)
 {
-    initUI();
+    init();
 }
 
 Window::~Window()
@@ -47,36 +48,40 @@ void Window::paintEvent(QPaintEvent* ev)
     p.drawText(rectangle, Qt::AlignCenter, QString::fromLatin1("%1 %").arg(std::round(progress * 100)));
 }
 
-void Window::initUI()
+void Window::init()
 {
     setFixedSize(1000, 600);
 
     start_url = new QLineEdit(this);
     query_str = new QLineEdit(this);
     urls_to_scan = new QLineEdit(this);
+    threads_num = new QLineEdit(this);
     start_btn = new QPushButton(QLatin1String("Start"), this);
     abort_btn = new QPushButton(QLatin1String("Abort"), this);
     pause_btn = new QPushButton(QLatin1String("Pause"), this);
     reset_btn = new QPushButton(QLatin1String("Reset"), this);
     results_view = new QListWidget(this);
 
-    start_url->setGeometry(10, 10, 400, 30);
-    query_str->setGeometry(10, 50, 400, 30);
+    start_url->setGeometry(10, 10, 420, 30);
+    query_str->setGeometry(10, 50, 420, 30);
     urls_to_scan->setGeometry(10, 90, 100, 30);
-    start_btn->setGeometry(140, 90, 60, 30);
-    abort_btn->setGeometry(210, 90, 60, 30);
-    pause_btn->setGeometry(280, 90, 60, 30);
-    reset_btn->setGeometry(350, 90, 60, 30);
+    threads_num->setGeometry(120, 90, 100, 30);
+    start_btn->setGeometry(230, 90, 50, 30);
+    abort_btn->setGeometry(280, 90, 50, 30);
+    pause_btn->setGeometry(330, 90, 50, 30);
+    reset_btn->setGeometry(380, 90, 50, 30);
     results_view->setGeometry(450, 10, 500, 550);
 
     const QFont font(QLatin1String("Helvetica"), 10, 60);
     start_url->setFont(font);
     query_str->setFont(font);
     urls_to_scan->setFont(font);
+    threads_num->setFont(font);
 
     start_url->setPlaceholderText(QLatin1String("Start URL"));
     query_str->setPlaceholderText(QLatin1String("Query"));
     urls_to_scan->setPlaceholderText(QLatin1String("URLs to scan"));
+    threads_num->setPlaceholderText(QLatin1String("Threads Num"));
 
     reset();
 
@@ -93,7 +98,7 @@ void Window::start()
     items.clear();
     results_view->clear();
     updateRunningStatus(true);
-    crawler = new Crawler(start_url->text(), query_str->text(), urls_to_scan->text().toInt());
+    crawler = new Crawler(start_url->text(), query_str->text(), urls_to_scan->text().toInt(), threads_num->text().toInt());
 
     connect(crawler, &Crawler::urlLoading, this, &Window::onUrlLoading);
     connect(crawler, &Crawler::urlFound, this, &Window::onUrlFound);
@@ -101,6 +106,7 @@ void Window::start()
     connect(crawler, &Crawler::urlError, this, &Window::onUrlError);
     connect(crawler, &Crawler::progress, this, &Window::onProgressChanged);
     connect(crawler, &Crawler::finished, this, [this]() {
+        onProgressChanged(1);
         crawler->deleteLater();
         crawler = nullptr;
         updateRunningStatus(false);
@@ -112,7 +118,7 @@ void Window::start()
 void Window::abort()
 {
     Q_ASSERT(crawler);
-    crawler->abort();
+    crawler->quit();
 }
 
 void Window::pause()
@@ -135,11 +141,12 @@ void Window::reset()
     start_url->clear();
     query_str->clear();
     urls_to_scan->clear();
+    threads_num->clear();
     start_btn->setEnabled(true);
     reset_btn->setEnabled(true);
     abort_btn->setEnabled(false);
     pause_btn->setEnabled(false);
-    onProgressChanged(0.);
+    onProgressChanged(0);
 }
 
 void Window::updateRunningStatus(bool running)
@@ -147,6 +154,7 @@ void Window::updateRunningStatus(bool running)
     start_url->setReadOnly(running);
     query_str->setReadOnly(running);
     urls_to_scan->setReadOnly(running);
+    threads_num->setReadOnly(running);
     start_btn->setEnabled(!running);
     reset_btn->setEnabled(!running);
     abort_btn->setEnabled(running);
@@ -164,8 +172,12 @@ void Window::updatePauseStatus(bool pause)
 void Window::onUrlLoading(const QString& url)
 {
     if (!items.contains(url)) {
+        //auto scrollbar = results_view->verticalScrollBar();
+        //const bool need_scroll = scrollbar->value() == scrollbar->maximum();
         items.insert(url, new QListWidgetItem(url, results_view));
-        results_view->scrollToBottom();
+        //if (need_scroll) {
+          //  results_view->scrollToBottom();
+        //}
     }
 }
 

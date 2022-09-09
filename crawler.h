@@ -10,13 +10,14 @@ class Crawler : public QObject {
     Q_OBJECT
 
 public:
-    explicit Crawler(const QString& start_url, const QString& query, int max_urls);
+    explicit Crawler(const QString& start_url, const QString& query, int max_urls, int threads_num);
     ~Crawler() override;
 
     void start();
     void suspend();
     void resume();
-    void abort();
+    void quit();
+    void wait();
 
 signals:
     void urlLoading(const QString& url);

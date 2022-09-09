@@ -20,7 +20,7 @@ protected:
     void paintEvent(QPaintEvent* ev) override;
 
 private:
-    void initUI();
+    void init();
 
     void start();
     void abort();
@@ -43,6 +43,7 @@ private:
     QLineEdit* start_url;
     QLineEdit* query_str;
     QLineEdit* urls_to_scan;
+    QLineEdit* threads_num;
     QListWidget* results_view;
     QHash<QString, QListWidgetItem*> items;
     double progress;
